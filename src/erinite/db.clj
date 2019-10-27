@@ -64,5 +64,6 @@
     (def this-ns# *ns*)
     (hugsql/def-db-fns ~queries-file)
     (defmethod ig/init-key ~component-id [_# _#]
-      (hugsql/def-db-fns ~queries-file {:ns this-ns#}))))
+      (hugsql/def-db-fns ~queries-file {:ns this-ns#}))
+    (defmethod ig/halt-key! ~component-id [_# _#])))
      
