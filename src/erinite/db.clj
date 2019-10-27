@@ -1,9 +1,11 @@
 (ns erinite.db
   (:require [clojure.java.jdbc :as jdbc]
             [hugsql.core :as hugsql]
+            [clojure.string :as string]
+            [clojure.core.async :as async]
             [integrant.core :as ig]))
 
-(defn -run-in-tx
+(defn -run-in-tx!
   [db f]
   (try
     (jdbc/with-db-transaction [tx db {:isolation :repeatable-read}]
@@ -28,8 +30,8 @@
 
           :error
           (if on-error!
-            (on-error! e)
-            (.printStackTrace e))
+            (on-error! result)
+            (.printStackTrace result))
 
           :success
           (if on-success!
