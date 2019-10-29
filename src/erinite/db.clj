@@ -39,16 +39,22 @@
             result))))))
 
 (defmacro with-tx [[tx db] & body]
-  `(in-async-tx
-    (or (:spec ~db) ~db)
-    (fn [~tx]
-      ~@body)))
+  `(let [p# (promise)]
+    (in-async-tx
+     (or (:spec ~db) ~db)
+     (fn [~tx]
+       ~@body)
+     {:on-success! #(deliver p# %)})
+    p#))
 
 (defn call-with-tx
   [db f! & args]
-  (in-async-tx
-    db
-    #(apply f! % args)))
+  (let [p (promise)]
+    (in-async-tx
+      db
+      #(apply f! % args)
+      {:on-success! #(deliver p %)})
+    p))
 
 (defn stream-tx!
   [db f! {:keys [success error]}]
