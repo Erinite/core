@@ -14,7 +14,9 @@
       (let [sql-state (.getSQLState e)]
         (if (string/includes? sql-state "40001")
           [:retry nil]
-          [:error e])))))
+          [:error e])))
+    (catch Exception e
+      [:error e])))
 
 (defn in-async-tx
   "Run a function, f, inside a database transaction, retrying on concurrent"
@@ -31,21 +33,26 @@
           :error
           (if on-error!
             (on-error! result)
-            (.printStackTrace result))
+            (do
+              (.printStackTrace result)
+              ::nil))
 
           :success
           (if on-success!
             (on-success! result)
-            result))))))
+            (if (nil? result) ::nil result)))))))
 
 (defmacro with-tx [[tx db] & body]
-  `(let [p# (promise)]
-    (in-async-tx
-     (or (:spec ~db) ~db)
-     (fn [~tx]
-       ~@body)
-     {:on-success! #(deliver p# %)})
-    p#))
+  `(let [error-ch# (async/chan)
+         result-ch# (in-async-tx
+                      (or (:spec ~db) ~db)
+                      (fn [~tx]
+                        ~@body)
+                      {:on-error! #(async/>!! error-ch# %)})]
+    (let [[value# ch#] (async/alts!! [result-ch# error-ch#])]
+      (if (= ch# result-ch#)
+        (when-not (= value# ::nil) value#)
+        (throw value#)))))
 
 (defn call-with-tx
   [db f! & args]
