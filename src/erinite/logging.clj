@@ -11,10 +11,14 @@
                              :session/account (:account-id session#)
                              :session/id (:id session#))
                  ~data)]
-     (logger/-log logger# ~level
-       ~(str *ns*) ~*file* ~(:line (meta &form))
-       (delay (java.util.UUID/randomUUID))
-       ~event data#)))
+     (if logger#
+      (logger/-log logger# ~level
+        ~(str *ns*) ~*file* ~(:line (meta &form))
+        (delay (java.util.UUID/randomUUID))
+        ~event data#)
+      (println "No logger provided"
+               ~(str "[" *ns* ":" *file* ":" (:line (meta &form)) "]:") 
+               level event data))))
 
 (defmacro log
   [ctx level event data]
