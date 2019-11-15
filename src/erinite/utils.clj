@@ -22,3 +22,12 @@
   (when data
     (nippy/freeze data)))
 
+(defn when-fn
+  "Apply f only if argument is not nil, otherwise return nil"
+  [f]
+  #(when-not (nil? %) (f %)))
+
+(defn if-fn
+  "Apply f only if argument is not nil, otherwise return v. Opposite of fnil"
+  [f v]
+  #(if (nil? %) v (f %)))

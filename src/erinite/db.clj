@@ -60,7 +60,8 @@
     (in-async-tx
       db
       #(apply f! % args)
-      {:on-success! #(deliver p %)})
+      {:on-success! #(deliver p %)
+       :on-error! #(deliver p nil)})
     p))
 
 (defn stream-tx!

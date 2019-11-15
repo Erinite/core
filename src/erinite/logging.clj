@@ -11,28 +11,15 @@
                              :session/account (:account-id session#)
                              :session/id (:id session#))
                  ~data)]
-     (if logger#
-      (logger/-log logger# ~level
-        ~(str *ns*) ~*file* ~(:line (meta &form))
-        (delay (java.util.UUID/randomUUID))
-        ~event data#)
-      (println "No logger provided"
-               ~(str "[" *ns* ":" *file* ":" (:line (meta &form)) "]:") 
-               level event data))))
-
-(defmacro log
-  [ctx level event data]
-  `(let [session# (:session ~ctx)
-         logger# (:logger ~ctx)
-         data# (if session#
-                 (assoc ~data :session/user (:user-id session#)
-                             :session/account (:account-id session#)
-                             :session/id (:id session#))
-                 ~data)]
-     (logger/-log logger# ~level
-       ~(str *ns*) ~*file* ~(:line (meta &form))
-       (delay (java.util.UUID/randomUUID))
-       ~event data#)))
+      (if logger#
+        (logger/-log logger# ~level
+          ~(str *ns*) ~*file* ~(:line (meta &form))
+          (delay (java.util.UUID/randomUUID))
+          ~event data#)
+        (println "No logger provided"
+                 ~(str "[" *ns* ":" *file* ":" (:line (meta &form)) "]:") 
+                 ~level ~event ~data))
+      nil))
 
 (defn -add-exception-info
   [data e]
@@ -50,8 +37,9 @@
                              :session/account (:account-id session#)
                              :session/id (:id session#))
                  ~data)]
-     (logger/-log logger# :error
-       ~(str *ns*) ~*file* ~(:line (meta &form))
-       (delay (java.util.UUID/randomUUID))
-       ~event (-add-exception-info data# ~ex))))
+      (logger/-log logger# :error
+        ~(str *ns*) ~*file* ~(:line (meta &form))
+        (delay (java.util.UUID/randomUUID))
+        ~event (-add-exception-info data# ~ex))
+      nil))
 
