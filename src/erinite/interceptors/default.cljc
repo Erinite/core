@@ -16,4 +16,3 @@
             (let [logger (get-in context [:request :logger])]
               (log/log logger :trace ::attach-services {:services (vec (keys services))})
               (update-in context [:request :services] merge services)))})
-   

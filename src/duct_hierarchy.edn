@@ -1,0 +1,2 @@
+{:erinite/logging [:duct/module]
+ :erinite.logging/timbre-json [:duct/logger]}

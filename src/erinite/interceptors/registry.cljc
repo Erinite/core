@@ -9,4 +9,3 @@
        (map (juxt :id :interceptor))
        (into {:attach-db default/attach-db
               :attach-services default/attach-services})))
-  
