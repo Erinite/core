@@ -5,7 +5,6 @@
 (defmethod ig/init-key :erinite.interceptors/registry
   [_ {:keys [interceptors]}]
   (->> interceptors
-       (reduce into [])
-       (map (juxt :id :interceptor))
+       (reduce merge)
        (into {:attach-db default/attach-db
               :attach-services default/attach-services})))

@@ -1,5 +1,6 @@
 (ns erinite.router
-  (:require [integrant.core :as ig]
+  (:require [erinite.utils :as utils]
+            [integrant.core :as ig]
             [reitit.ring :as ring]
             [reitit.http :as http]
             [duct.logger :as log]
@@ -11,28 +12,27 @@
             [reitit.interceptor.sieppari :as sieppari]
             [clojure.walk :as walk]))
 
-(defn attach-logger
+(defn enrich-request-interceptor
   [logger]
-  {:name :attach-logger
+  {:name :enrich-request
    :enter (fn [context]
-            (assoc-in context [:request :logger] logger))})
-
-(defn attach-data-interceptor
-  []
-  {:enter (fn [ctx]
-            (let [request (:request ctx)
+            (let [request (:request context)
+                  correlation-id (or (get-in request [:headers "x-correlation-id"])
+                                     (utils/make-id))
                   method (:request-method request)
                   data (-> request (ring/get-match) :data)
                   route-data (merge data (get data method))]
-              (update ctx :request assoc :data route-data)))})
+              (->> (assoc request
+                          :logger logger
+                          :data route-data
+                          :correlation-id correlation-id)
+                   (assoc context :request))))})
 
 (defn common-interceptors [base-interceptors logger]
   (into
    base-interceptors
-   [;; include logger in request
-    (attach-logger logger)
-   ;; include route-data in request
-    (attach-data-interceptor)
+   [;; Enrich the request by adding the logger, route data and correlation-id
+    (enrich-request-interceptor logger)
    ;; query-params & form-params
     (parameters/parameters-interceptor)
    ;; content-negotiation
@@ -46,10 +46,13 @@
    ;; coercing request parameters
     (coercion/coerce-request-interceptor)]))
 
-(defn- invalid-interceptor
-  [logger route-name interceptor-id & args] 
-  (log/log logger :warn ::invalid-interceptor {:interceptor interceptor-id
-                                               :route route-name}))
+
+(defn -make-interceptor
+  [logger registry route-name interceptor-id args]
+  (if-let [ctor (get registry interceptor-id)]
+    (apply ctor args)
+    (log/log logger :warn ::invalid-interceptor {:interceptor interceptor-id
+                                                 :route route-name})))
 
 (defn transform-interceptor-vector
   [interceptors dynamic-interceptors registry logger route-name]
@@ -57,20 +60,22 @@
     (fn [interceptor]
       (if-let [[id & args] (and (vector? interceptor)
                                 interceptor)]
-        (apply (get registry id (partial invalid-interceptor logger route-name id)) args)
+        (-make-interceptor logger registry route-name id args)
         (if (keyword? interceptor)
-          ((get registry interceptor (partial invalid-interceptor logger route-name interceptor)))
+          (-make-interceptor logger registry route-name interceptor [])
           interceptor))) 
-    (into interceptors
+    (into (or interceptors [])
           dynamic-interceptors)))
 
 (defn transform-interceptor-vectors
   [routes registry dynamic-interceptors logger]
   (walk/postwalk
     (fn [node]
-      (if (and (map? node) (:interceptors node))
-        (update node :interceptors transform-interceptor-vector (dynamic-interceptors node) registry logger (:name node))
-        node))
+      (let [dynamic-interceptors (dynamic-interceptors node)]
+        (if (and (map? node) 
+                 (or (:interceptors node) dynamic-interceptors))
+          (update node :interceptors transform-interceptor-vector dynamic-interceptors registry logger (:name node))
+          node)))
     routes))
 
 

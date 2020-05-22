@@ -129,15 +129,15 @@
 ;; 
 
 (defmacro log
-  [ctx level event data]
+  [ctx level event & [data]]
   `(let [logger# (:logger ~ctx)
          data#  (if-let [session# (:session ~ctx)]
                   (assoc ~data
                          :context {:user (:user-id session#)
                                    :account (:account-id session#)
                                    :session (:id session#)
-                                   :correlationId (:correlation-id session#)})
-                  ~data)]
+                                   :correlationId (:correlation-id ~ctx)})
+                  (assoc ~data :context {:correlationId (:correlation-id ~ctx)}))]
      (if logger#
        (logger/-log logger# ~level
                     ~(str *ns*) ~*file* ~(:line (meta &form))
@@ -156,5 +156,5 @@
          :stack-trace (mapv str (.getStackTrace e))))
 
 (defmacro log-exception
-  [ctx event ex data]
+  [ctx event ex & [data]]
   `(log ~ctx :error ~event (-add-exception-info ~data ~ex)))

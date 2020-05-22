@@ -8,7 +8,6 @@
                  [org.clojure/tools.reader "1.3.2"]
                  [com.taoensso/timbre "4.10.0"]
                  [cheshire "5.10.0" :exclusions [com.fasterxml.jackson.core/jackson-core]]
-                 [com.layerware/hugsql-core "0.4.9" :exclusions [org.clojure/tools.reader]]
-                 [com.layerware/hugsql-adapter-clojure-java-jdbc "0.4.9"]
-                 [samsara/trackit-core "0.9.3"]]
+                 [com.layerware/hugsql "0.5.1" :exclusions [org.clojure/tools.reader]]
+                 [nano-id "1.0.0"]]
   :repl-options {:init-ns erinite.core})

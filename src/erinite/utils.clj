@@ -2,7 +2,8 @@
   (:require [clj-time.core :as time]
             [clj-time.coerce :as timec]
             [clojure.java.io :as io]
-            [taoensso.nippy :as nippy]))
+            [taoensso.nippy :as nippy]
+            [nano-id.core :as nano-id]))
 
 (defn get-current-time []
   (timec/to-long (time/now)))
@@ -31,3 +32,5 @@
   "Apply f only if argument is not nil, otherwise return v. Opposite of fnil"
   [f v]
   #(if (nil? %) v (f %)))
+
+(def make-id (nano-id/custom "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890" 15))
