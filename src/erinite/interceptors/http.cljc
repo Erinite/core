@@ -41,6 +41,6 @@
                                             :body ((:body result) data)}))
                 context))}))
 
-(defmethod ig/init-key :erinite.interceptors.http/translate-responses
+(defmethod ig/init-key ::translate-responses
   [_ _]
   (translate-responses))

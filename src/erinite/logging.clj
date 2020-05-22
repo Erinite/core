@@ -72,7 +72,7 @@
     (not (duct-log-format? vargs))
     (assoc :vargs [::legacy vargs])))
 
-(defmethod ig/init-key :erinite.logging/timbre-json [_ config]
+(defmethod ig/init-key ::timbre-json [_ config]
   (let [timbre-logger (->TimbreJsonLogger config)
         prev-root timbre/*config*]
     (if (:set-root-config? config)
@@ -81,7 +81,7 @@
         (assoc timbre-logger :prev-root-config prev-root))
       timbre-logger)))
 
-(defmethod ig/halt-key! :erinite.logging/timbre-json [_ timbre]
+(defmethod ig/halt-key! ::timbre-json [_ timbre]
   (when-let [prev-config (:prev-root-config timbre)]
     (timbre/set-config! prev-config)))
 
@@ -94,20 +94,20 @@
   (:environment options (::core/environment config :production)))
 
 (def ^:private prod-config
-  {:erinite.logging/timbre-json
+  {::timbre-json
    {:level     (merge/displace :info)
     :appenders ^:displace {::println (ig/ref ::println)}}
    ::println {}})
 
 (def ^:private test-config
-  {:erinite.logging/timbre-json
+  {::timbre-json
    {:level     (merge/displace :debug)
     :appenders ^:displace {::spit  (ig/ref ::spit)}}
    ::spit
    {:fname (merge/displace "logs/test.log")}})
 
 (def ^:private dev-config
-  {:erinite.logging/timbre-json
+  {::timbre-json
    {:level     (merge/displace :debug)
     :appenders ^:displace {::spit  (ig/ref ::spit)
                            ::brief (ig/ref ::brief)}}

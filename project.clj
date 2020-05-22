@@ -9,5 +9,6 @@
                  [com.taoensso/timbre "4.10.0"]
                  [cheshire "5.10.0" :exclusions [com.fasterxml.jackson.core/jackson-core]]
                  [com.layerware/hugsql "0.5.1" :exclusions [org.clojure/tools.reader]]
+                 [ring-cors "0.1.13"]
                  [nano-id "1.0.0"]]
   :repl-options {:init-ns erinite.core})
