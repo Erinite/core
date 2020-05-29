@@ -1,20 +1,21 @@
 (ns erinite.interceptors.http)
 
 (def status->codes
-  {:ok {:code 200 :body (fnil identity "Ok")}
-   :created {:code 201 :body (fnil identity "Created")}
-   :accepted {:code 202 :body (fnil identity "Accepted")}
-   :redirect {:code 307 :body (constantly "Redirect") :headers (fn [url] {"Location" url})}
-   :user-error {:code 400 :body (constantly "Bad Request")}
-   :invalid {:code 400 :body (constantly "Bad Request")}
-   :not-authorized {:code 401 :body (constantly "Not Authorized")}
-   :forbidden {:code 403 :body (constantly "Forbidden")}
-   :not-found {:code 404 :body (constantly "Not Found")}
-   :too-many-requests {:code 429 :body (constantly "Too Many Requests")}
-   :server-error {:code 500 :body (constantly "Internal Server Error")}
-   :bad-gateway {:code 502 :body (constantly "Bad Gateway")}
-   :unavailable {:code 503 :body (constantly "Service Unavailable")}
-   :gateway-timeout {:code 504 :body (constantly "Gateway Timeout")}})
+  {:ok {:code 200 :body identity}
+   :created {:code 201 :body identity}
+   :accepted {:code 202 :body identity}
+   :no-content {:code 204 :body (constantly nil)}
+   :redirect {:code 307 :body (constantly nil) :headers (fn [url] {"Location" url})}
+   :user-error {:code 400}
+   :invalid {:code 400}
+   :not-authorized {:code 401}
+   :forbidden {:code 403}
+   :not-found {:code 404}
+   :too-many-requests {:code 429}
+   :server-error {:code 500}
+   :bad-gateway {:code 502}
+   :unavailable {:code 503}
+   :gateway-timeout {:code 504}})
 
 (defn translate-responses
   "Translate responses in the form [status data] to ring responses:
@@ -38,7 +39,7 @@
             (if-let [response (when-let [[status & [data]] (and (vector? response) response)]
                                 (when-let [{:keys [code body headers]} (get status->codes status)]
                                   {:status code
-                                   :headers ((or headers (constantly {})) data)
-                                   :body (body data)}))]
+                                   :headers (when headers (headers data))
+                                   :body (when body (body data))}))]
               (assoc context :response response)
               context))})

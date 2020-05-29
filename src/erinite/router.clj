@@ -1,10 +1,10 @@
 (ns erinite.router
-  (:require [erinite.utils :as utils]
+  (:require [erinite.ids :as ids]
             [integrant.core :as ig]
             [reitit.ring :as ring]
             [reitit.http :as http]
             [duct.logger :as log]
-            [reitit.coercion.spec]
+            [reitit.coercion.spec :as spec-coercion]
             [reitit.http.coercion :as coercion]
             [reitit.http.interceptors.parameters :as parameters]
             [reitit.http.interceptors.exception :as exception]
@@ -24,7 +24,7 @@
    :enter (fn [context]
             (let [request (:request context)
                   correlation-id (or (get-in request [:headers "x-correlation-id"])
-                                     (utils/make-id))
+                                     (ids/make-id))
                   method (:request-method request)
                   data (-> request (ring/get-match) :data)
                   route-data (merge data (get data method))]
@@ -50,9 +50,11 @@
      ;; exception handling
      (when intercept-exceptions?
        (exception/exception-interceptor))
+     ;; exceptions from coercion
+     (coercion/coerce-exceptions-interceptor)
      ;; decoding request body
      (muuntaja/format-request-interceptor)
-     ;; coercing response bodys
+     ;; coercing response body
      (coercion/coerce-response-interceptor)
      ;; coercing request parameters
      (coercion/coerce-request-interceptor)
@@ -88,7 +90,7 @@
   [responses]
   (->> responses
        (map (fn [[k v]]
-              (let [code (get-in erinite-http/status->codes [k :code])]
+              (let [code (get-in erinite-http/status->codes [k :code] k)]
                 [code v])))
        (into {})))
 
@@ -103,8 +105,10 @@
         (if (map? node) 
           (cond-> node
             (or (:interceptors node)
-                dynamic-interceptors) (update :interceptors transform-interceptor-vector dynamic-interceptors registry logger (:name node))
-            translate-responses? (update :responses -convert-status-kw->code))
+                (and (or (:name node)
+                         (:handler node))
+                     dynamic-interceptors)) (update :interceptors transform-interceptor-vector dynamic-interceptors registry logger (:name node))
+            (and (:responses node) translate-responses?) (update :responses -convert-status-kw->code))
           node)))
     routes))
 
@@ -118,7 +122,7 @@
     * `interceptors` - an optional vector of interceptors to include in all routes
     * `translate-responses?` - set to true to translate [:ret-code-kw body] to {:status <code> :body <data>}, to allow the use of descriptive keywords instead of numeric status codes (defaults to true)
     * `intercept-exceptions?` - set to true to include exception interceptor (defaults to false)
-    * `corts-origins` - a vector of strings of allowed origins for CORS
+    * `cors-origins` - a vector of strings of allowed origins for CORS
     * `logger` - the duct logger used to report errors and to attach to requests"
   [{:keys [logger cors-origins routes interceptors dynamic-interceptors interceptor-registry translate-responses? intercept-exceptions?] :or {translate-responses? true}}]
   (let [interceptors (cond->> (or interceptors [])
@@ -126,15 +130,13 @@
         dynamic-interceptors (or dynamic-interceptors (constantly []))]
     (wrap-cors
      (http/ring-handler
-      (ring/router
+      (http/router
        (transform-routes routes interceptor-registry dynamic-interceptors logger translate-responses?)
-       {:data {:coercion reitit.coercion.spec/coercion
+       {:data {:coercion spec-coercion/coercion
                :muuntaja m/instance
                :interceptors (common-interceptors interceptors logger intercept-exceptions?)}
         :coerce http/coerce-handler
-        :compile http/compile-result
-      ;::http/default-options-handler ring/default-options-handler
-        })
+        :compile http/compile-result})
       (constantly {:status 404 :body "Not Found"})
       {:executor sieppari/executor})
      :access-control-allow-origin cors-origins
