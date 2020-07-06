@@ -6,11 +6,12 @@
    :accepted {:code 202 :body identity}
    :no-content {:code 204 :body (constantly nil)}
    :redirect {:code 307 :body (constantly nil) :headers (fn [url] {"Location" url})}
-   :user-error {:code 400}
+   :bad-request {:code 400}
    :invalid {:code 400}
    :not-authorized {:code 401}
    :forbidden {:code 403}
    :not-found {:code 404}
+   :conflict {:code 409}
    :too-many-requests {:code 429}
    :server-error {:code 500}
    :bad-gateway {:code 502}

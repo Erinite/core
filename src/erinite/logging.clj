@@ -49,10 +49,14 @@
     (not (duct-log-format? vargs))
     (assoc :vargs [::legacy vargs])))
 
+(def ^:dynamic *log-context* nil)
+
 (defrecord TimbreJsonLogger [config]
   logger/Logger
   (-log [_ level ns-str file line id event data]
-    (let [data (json/generate-string data)]
+    (let [data (json/generate-string (if *log-context*
+                                       (update data :context #(merge %2 %1) *log-context*)
+                                       data))]
       (cond
         (instance? Throwable data)
         (timbre/log! level :p (event)

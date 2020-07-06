@@ -16,7 +16,8 @@
             [muuntaja.core :as m]
             [ring.middleware.cors :refer [wrap-cors]]
             [reitit.interceptor.sieppari :as sieppari]
-            [clojure.walk :as walk]))
+            [clojure.walk :as walk]
+            [erinite.logging :as logging]))
 
 (defn enrich-request-interceptor
   [logger]
@@ -28,6 +29,7 @@
                   method (:request-method request)
                   data (-> request (ring/get-match) :data)
                   route-data (merge data (get data method))]
+              (set! logging/*log-context* {:correlation-id correlation-id})
               (->> (assoc request
                           :logger logger
                           :data route-data
