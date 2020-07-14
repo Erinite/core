@@ -17,7 +17,7 @@ You can then add modules, boundaries and services. For example:
 cd <project-name>
 erin add module --database sql
 erin add boundary accounts --sql
-erin add service accounts --add-boundary --db
+erin add service accounts --with-boundary --db
 ```
 
 You now have a project set up for SQL, with an `accounts` boundary and an `accounts` service:
