@@ -5,7 +5,7 @@ Erinite is a convenience layer on top of the excellent [Duct](https://github.com
 
 # Getting Started
 
-The easiest way to get started is to install [Erinite/cli](https://github.com/Erinite/cli) and run:
+The easiest way to get started is to install [erinite/cli](https://github.com/Erinite/cli) and run:
 
 ```
 erin new <project-name>
