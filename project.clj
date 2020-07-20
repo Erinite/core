@@ -1,9 +1,9 @@
-(defproject erinite-core "0.1.0-SNAPSHOT"
+(defproject erinite/core "0.1.0-SNAPSHOT"
   :description "Base functionality for Erintie application framework"
-  :url "http://example.com/FIXME"
+  :url "https://github.com/Erinite/core"
   :license {:name "MIT"
             :url "https://github.com/Erinite/erinite-core/blob/master/LICENSE"}
-  :dependencies [[org.clojure/clojure "1.10.0"]
+  :dependencies [[org.clojure/clojure "1.10.1"]
                  [clj-time "0.15.0"]
                  [org.clojure/tools.reader "1.3.2"]
                  [com.taoensso/timbre "4.10.0"]
