@@ -53,21 +53,23 @@
 
 (defrecord TimbreJsonLogger [config]
   logger/Logger
-  (-log [_ level ns-str file line id event data]
-    (let [data (json/generate-string (if *log-context*
-                                       (update data :context #(merge %2 %1) *log-context*)
-                                       data))]
+  (-log [_ level ns-str file line id event data]        
+    (let [env (:env config)
+          json (when data 
+                 (json/generate-string (cond-> data
+                                         env (assoc-in [:context :env] env)
+                                         *log-context* (update :context #(merge %2 %1) *log-context*))))]
       (cond
         (instance? Throwable data)
-        (timbre/log! level :p (event)
+        (timbre/log! level :p  [event]
                      {:config config, :?ns-str ns-str, :?file file, :?line line, :?err data
                       :?base-data {:id_ id}})
         (nil? data)
-        (timbre/log! level :p (event)
+        (timbre/log! level :p  [event]
                      {:config config, :?ns-str ns-str, :?file file, :?line line
                       :?base-data {:id_ id}})
         :else
-        (timbre/log! level :p (event data)
+        (timbre/log! level :p [event json]
                      {:config config, :?ns-str ns-str, :?file file, :?line line
                       :?base-data {:id_ id}})))))
 
@@ -100,12 +102,14 @@
 (def ^:private prod-config
   {::timbre-json
    {:level     (merge/displace :info)
+    :env     (merge/displace "prod")
     :appenders ^:displace {::println (ig/ref ::println)}}
    ::println {}})
 
 (def ^:private test-config
   {::timbre-json
    {:level     (merge/displace :debug)
+    :env     (merge/displace "test")
     :appenders ^:displace {::spit  (ig/ref ::spit)}}
    ::spit
    {:fname (merge/displace "logs/test.log")}})
@@ -113,6 +117,7 @@
 (def ^:private dev-config
   {::timbre-json
    {:level     (merge/displace :debug)
+    :env     (merge/displace "dev")
     :appenders ^:displace {::spit  (ig/ref ::spit)
                            ::brief (ig/ref ::brief)}}
    ::spit
@@ -132,25 +137,27 @@
 ;; HELPERS
 ;; 
 
+(defn set-context!
+  [session-id user-id account-id]
+  (set! *log-context* {:user user-id
+                       :account account-id
+                       :session session-id
+                       :correlation-id (:correlation-id *log-context*)}))
+
 (defmacro log
   [ctx level event & [data]]
-  `(let [logger# (:logger ~ctx)
-         data#  (if-let [session# (:session ~ctx)]
-                  (assoc ~data
-                         :context {:user (:user-id session#)
-                                   :account (:account-id session#)
-                                   :session (:id session#)
-                                   :correlationId (:correlation-id ~ctx)})
-                  (assoc ~data :context {:correlationId (:correlation-id ~ctx)}))]
-     (if logger#
+  (when-not (contains? #{:report :fatal :error :warn :info :debug :trace} level)
+    (throw (IllegalArgumentException. (str "Invalid log level: " level))))
+  `(let [ctx# ~ctx
+         logger# (:logger ctx#)
+         context# (:log-context ctx#)
+         data# ~data]
+     (when logger#
        (logger/-log logger# ~level
                     ~(str *ns*) ~*file* ~(:line (meta &form))
                     (delay (java.util.UUID/randomUUID))
-                    ~event data#)
-       (println "No logger provided"
-                ~(str "[" *ns* ":" *file* ":" (:line (meta &form)) "]:")
-                ~level ~event ~data))
-     nil))
+                    ~event (cond-> data#
+                            context# (assoc :context context#))))))
 
 (defn -add-exception-info
   [data e]

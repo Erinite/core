@@ -3,7 +3,6 @@
             [integrant.core :as ig]
             [reitit.ring :as ring]
             [reitit.http :as http]
-            [duct.logger :as log]
             [reitit.coercion.spec :as spec-coercion]
             [reitit.http.coercion :as coercion]
             [reitit.http.interceptors.parameters :as parameters]
@@ -18,6 +17,11 @@
             [reitit.interceptor.sieppari :as sieppari]
             [clojure.walk :as walk]
             [erinite.logging :as logging]))
+
+(defn wrap-log-context [f]
+  (fn [request]
+    (binding [logging/*log-context* {}]
+      (f request))))
 
 (defn enrich-request-interceptor
   [logger]
@@ -36,8 +40,11 @@
                           :correlation-id correlation-id)
                    (assoc context :request))))})
 
+(defn -default-error-handler-handler [callback exception request]
+  {:status 500
+   :body (callback exception request)})
 
-(defn common-interceptors [base-interceptors logger intercept-exceptions?]
+(defn common-interceptors [base-interceptors logger {:keys [response-fn on-error-fn!] :as intercept-exceptions?}]
   (filterv
    seq
    (into
@@ -51,7 +58,17 @@
      (muuntaja/format-response-interceptor)
      ;; exception handling
      (when intercept-exceptions?
-       (exception/exception-interceptor))
+       (exception/exception-interceptor
+        (merge
+         exception/default-handlers
+         {::exception/default (partial -default-error-handler-handler (or response-fn (constantly "Internal Server Error")))
+          ::exception/wrap (fn [handler e request]
+                             (let [error-info (merge
+                                               (select-keys request [:uri :method :parameters])
+                                               (when on-error-fn!
+                                                 (on-error-fn! e request)))]
+                               (logging/log-exception (if (:logger request) request {:logger logger}) ::exception e error-info))
+                             (handler e request))})))
      ;; exceptions from coercion
      (coercion/coerce-exceptions-interceptor)
      ;; decoding request body
@@ -72,8 +89,8 @@
   [logger registry route-name interceptor-id args]
   (if-let [ctor (get registry interceptor-id)]
     (apply ctor args)
-    (log/log logger :warn ::invalid-interceptor {:interceptor interceptor-id
-                                                 :route route-name})))
+    (logging/log logger :warn ::invalid-interceptor {:interceptor interceptor-id
+                                                     :route route-name})))
 
 (defn transform-interceptor-vector
   [interceptors dynamic-interceptors registry logger route-name]
@@ -123,24 +140,30 @@
     * `dynamic-interceptors` - a function which generates a vector of interceptor keywords, given a reitit route, used to dynamically add interceptors based on route attributes
     * `interceptors` - an optional vector of interceptors to include in all routes
     * `translate-responses?` - set to true to translate [:ret-code-kw body] to {:status <code> :body <data>}, to allow the use of descriptive keywords instead of numeric status codes (defaults to true)
-    * `intercept-exceptions?` - set to true to include exception interceptor (defaults to false)
+    * `intercept-exceptions` - set to true to include exception interceptor (defaults to false), or a map with one or both keys {:response-fn rf :on-error-fn! ef}.
+         -- `(fn rf [exception request])` should return the body of the HTTP response on error (string or map)
+         -- `(fn re [exception request])` is a side-effecting function which can be used to record the error in an error tracking or monitoring system, its return value should be nil or a map, which is merged into the log statement
+         In any case, if `intercept-exceptions` is truthy, the exception is logged as an error by the logger, return value from `re` is merged into the data map.
     * `cors-origins` - a vector of strings of allowed origins for CORS
+    * `custom-ring-middleware` - ring middleware function, if provided, will wrap after CORS but before all interceptors
     * `logger` - the duct logger used to report errors and to attach to requests"
-  [{:keys [logger cors-origins routes interceptors dynamic-interceptors interceptor-registry translate-responses? intercept-exceptions?] :or {translate-responses? true}}]
+  [{:keys [logger cors-origins routes custom-ring-middleware interceptors dynamic-interceptors interceptor-registry translate-responses? intercept-exceptions] :or {translate-responses? true}}]
   (let [interceptors (cond->> (or interceptors [])
                        translate-responses? (into [(erinite-http/translate-responses)]))
         dynamic-interceptors (or dynamic-interceptors (constantly []))]
     (wrap-cors
-     (http/ring-handler
-      (http/router
-       (transform-routes routes interceptor-registry dynamic-interceptors logger translate-responses?)
-       {:data {:coercion spec-coercion/coercion
-               :muuntaja m/instance
-               :interceptors (common-interceptors interceptors logger intercept-exceptions?)}
-        :coerce http/coerce-handler
-        :compile http/compile-result})
-      (constantly {:status 404 :body "Not Found"})
-      {:executor sieppari/executor})
+     (wrap-log-context
+      ((or custom-ring-middleware identity)
+       (http/ring-handler
+        (http/router
+         (transform-routes routes interceptor-registry dynamic-interceptors logger translate-responses?)
+         {:data {:coercion spec-coercion/coercion
+                 :muuntaja m/instance
+                 :interceptors (common-interceptors interceptors logger intercept-exceptions)}
+          :coerce http/coerce-handler
+          :compile http/compile-result})
+        (constantly {:status 404 :body "Not Found"})
+        {:executor sieppari/executor})))
      :access-control-allow-origin cors-origins
      :access-control-allow-methods [:get :put :post :delete])))
 
