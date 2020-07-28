@@ -7,6 +7,7 @@
                  [clj-time "0.15.0"]
                  [org.clojure/tools.reader "1.3.2"]
                  [com.taoensso/timbre "4.10.0"]
+                 [duct/logger "0.3.0"]
                  [cheshire "5.10.0" :exclusions [com.fasterxml.jackson.core/jackson-core]]
                  [com.layerware/hugsql "0.5.1" :exclusions [org.clojure/tools.reader]]
                  [ring-cors "0.1.13"]

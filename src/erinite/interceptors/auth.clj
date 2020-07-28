@@ -1,7 +1,7 @@
 (ns erinite.interceptors.auth
   (:require [integrant.core :as ig]
             [sieppari.context :as sc]
-            [erinite.logging :refer [log log-exception]]))
+            [erinite.logging :refer [log log-exception] :as logging]))
 
 (defn -get-token
   "Get token as either a bearer token in the authorization header, or as a sessionid in a cookie:
@@ -29,10 +29,11 @@
                                             (session-valid? token)
                                             (catch Exception e
                                               (log-exception request :session/validation-error e))))]
-                (do
-                  (log request :debug ::authenticated {:session/account (:account-id session)
-                                                       :session/user (:user-id session)
-                                                       :session/id (:id session)})
+                (let [{:keys [account-id user-id id]} session]
+                  (log request :debug ::authenticated {:session/account account-id
+                                                       :session/user user-id
+                                                       :session/id id})
+                  (logging/set-context! id user-id account-id)
                   (assoc-in context [:request :session] session))
                 (do
                   (log request :debug ::not-authorized)
