@@ -89,6 +89,12 @@
   (when-let [prev-config (:prev-root-config timbre)]
     (timbre/set-config! prev-config)))
 
+(def -global-excepiton-handler (fn [_ _ data] data))
+
+(defn register-exception-handler!
+  [handler]
+  (alter-var-root #'-global-excepiton-handler (constantly handler)))
+
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; COPIED FROM:
 ;; https://github.com/duct-framework/module.logging
@@ -125,7 +131,9 @@
    :development dev-config
    :test       test-config})
 
-(defmethod ig/init-key :erinite/logging [_ options]
+(defmethod ig/init-key :erinite/logging [_ {:keys [exception-handler] :as options}]
+  (when exception-handler
+    (register-exception-handler! exception-handler))
   #(core/merge-configs % (env-configs (get-environment % options))))
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -153,7 +161,7 @@
      nil))
 
 (defn -add-exception-info
-  [data e]
+  [e data]
   (assoc data
          :message (.getMessage e)
          :exception (.. e getClass getSimpleName)
@@ -161,4 +169,6 @@
 
 (defmacro log-exception
   [ctx event ex & [data]]
-  `(log ~ctx :error ~event (-add-exception-info ~data ~ex)))
+  `(->> (-add-exception-info ~ex ~data)
+        (-global-excepiton-handler ~ctx ~ex)
+        (log ~ctx :error ~event)))
