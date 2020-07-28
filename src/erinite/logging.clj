@@ -17,6 +17,14 @@
 ;; https://github.com/duct-framework/logger.timbre
 ;; data has been wrapped in cheshire's generate-string
 
+
+(def -global-excepiton-handler (fn [_ _ _ data] data))
+
+(defn register-exception-handler!
+  [handler]
+  (alter-var-root #'-global-excepiton-handler (constantly handler)))
+
+
 (defn brief-output-fn [{:keys [msg_]}]
   (force msg_))
 
@@ -78,7 +86,9 @@
     (not (duct-log-format? vargs))
     (assoc :vargs [::legacy vargs])))
 
-(defmethod ig/init-key ::timbre-json [_ config]
+(defmethod ig/init-key ::timbre-json [_ {:keys [exception-handler] :as config}]
+  (when exception-handler
+    (register-exception-handler! exception-handler))
   (let [timbre-logger (->TimbreJsonLogger config)
         prev-root timbre/*config*]
     (if (:set-root-config? config)
@@ -90,12 +100,6 @@
 (defmethod ig/halt-key! ::timbre-json [_ timbre]
   (when-let [prev-config (:prev-root-config timbre)]
     (timbre/set-config! prev-config)))
-
-(def -global-excepiton-handler (fn [_ _ data] data))
-
-(defn register-exception-handler!
-  [handler]
-  (alter-var-root #'-global-excepiton-handler (constantly handler)))
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; COPIED FROM:
@@ -136,9 +140,7 @@
    :development dev-config
    :test       test-config})
 
-(defmethod ig/init-key :erinite/logging [_ {:keys [exception-handler] :as options}]
-  (when exception-handler
-    (register-exception-handler! exception-handler))
+(defmethod ig/init-key :erinite/logging [_ options]
   #(core/merge-configs % (env-configs (get-environment % options))))
 
 ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -177,5 +179,5 @@
 (defmacro log-exception
   [ctx event ex & [data]]
   `(->> (-add-exception-info ~ex ~data)
-        (-global-excepiton-handler ~ctx ~ex)
+        (-global-excepiton-handler (merge *log-context* (:context ~ctx)) ~event ~ex)
         (log ~ctx :error ~event)))
