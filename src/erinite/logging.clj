@@ -64,7 +64,9 @@
   (-log [_ level ns-str file line id event data]        
     (let [env (:env config)
           json (when data 
-                 (json/generate-string (cond-> data
+                 (json/generate-string (cond-> (if-not (map? data)
+                                                 {:data data}
+                                                 data)
                                          env (assoc-in [:context :env] env)
                                          *log-context* (update :context #(merge %2 %1) *log-context*))))]
       (cond

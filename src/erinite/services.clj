@@ -7,3 +7,9 @@
       #(assoc % :ctx {:logger logger
                       :session session})
       service-list)))
+
+(defn data
+  ([request]
+   (:component-data request))
+  ([request key]
+   (get-in request [:component-data key])))

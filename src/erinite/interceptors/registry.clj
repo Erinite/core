@@ -7,4 +7,5 @@
   (->> interceptors
        (reduce merge)
        (into {:attach-db default/attach-db
-              :attach-services default/attach-services})))
+              :attach-services default/attach-services
+              :attach-data default/attach-component-data})))

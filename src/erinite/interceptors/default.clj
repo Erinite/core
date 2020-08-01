@@ -16,3 +16,11 @@
             (let [logger (get-in context [:request :logger])]
               (log/log logger :trace ::attach-services {:services (vec (keys services))})
               (update-in context [:request :services] merge services)))})
+
+(defn attach-component-data
+  [data]
+  {:name :attach-component-data
+   :enter (fn [context]
+            (let [logger (get-in context [:request :logger])]
+              (log/log logger :trace ::attach-data {:data (vec (keys data))})
+              (update-in context [:request :component-data] merge data)))})
