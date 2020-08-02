@@ -25,11 +25,3 @@
      [data]
      (when data
        (nippy/freeze data))))
-
-#?(:clj
-   (defn input-stream->str
-     [input-stream]
-     (when input-stream
-       (with-open [xout (java.io.ByteArrayOutputStream.)]
-         (io/copy input-stream xout)
-         (.toString xout)))))

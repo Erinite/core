@@ -12,5 +12,4 @@
                  [com.layerware/hugsql "0.5.1" :exclusions [org.clojure/tools.reader]]
                  [ring-cors "0.1.13"]
                  [nano-id "1.0.0"]
-                 [jstrutz/hashids "1.0.1"]]
-  :repl-options {:init-ns erinite.core})
+                 [jstrutz/hashids "1.0.1"]])
