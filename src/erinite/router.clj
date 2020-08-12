@@ -162,7 +162,9 @@
                  :interceptors (common-interceptors interceptors logger intercept-exceptions)}
           :coerce http/coerce-handler
           :compile http/compile-result})
-        (constantly {:status 404 :body "Not Found"})
+        (constantly {:status 404
+                     :headers {"Content-Type" "text/plain"}
+                     :body "Not Found"})
         {:executor sieppari/executor})))
      :access-control-allow-origin (map re-pattern cors-origins)
      :access-control-allow-methods [:get :put :post :delete])))
