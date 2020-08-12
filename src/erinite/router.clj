@@ -164,7 +164,7 @@
           :compile http/compile-result})
         (constantly {:status 404 :body "Not Found"})
         {:executor sieppari/executor})))
-     :access-control-allow-origin cors-origins
+     :access-control-allow-origin (map re-pattern cors-origins)
      :access-control-allow-methods [:get :put :post :delete])))
 
 (defmethod ig/init-key :erinite/router
