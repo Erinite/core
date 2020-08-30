@@ -1,11 +1,11 @@
 (ns erinite.interceptors.http)
 
 (def status->codes
-  {:ok {:code 200 :body identity}
-   :created {:code 201 :body identity}
-   :accepted {:code 202 :body identity}
-   :no-content {:code 204 :body (constantly nil)}
-   :redirect {:code 307 :body (constantly nil) :headers (fn [url] {"Location" url})}
+  {:ok {:code 200 :body (fnil identity {})}
+   :created {:code 201 :body (fnil identity {})}
+   :accepted {:code 202 :body (fnil identity {})}
+   :no-content {:code 204}
+   :redirect {:code 307 :headers (fn [url] {"Location" url})}
    :bad-request {:code 400}
    :invalid {:code 400}
    :not-authorized {:code 401}

@@ -24,3 +24,10 @@
    (first (hashids/decode {:alphabet alphabet} id)))
   ([opts id]
    (first (hashids/decode (update opts :alphabet (fnil identity alphabet)) id))))
+
+(defn decode-n
+  "Decodes a string encoded with `encode` when passed a collection of ids, must use identical `opts`. Returns collection of ids"
+  ([ids]
+    (hashids/decode {:alphabet alphabet} ids))
+  ([opts ids]
+    (hashids/decode (update opts :alphabet (fnil identity alphabet)) ids)))

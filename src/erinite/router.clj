@@ -41,8 +41,12 @@
                    (assoc context :request))))})
 
 (defn -default-error-handler-handler [callback exception request]
-  {:status 500
-   :body (callback exception request)})
+  (let [body (callback exception request)]
+    {:status 500
+     :headers {"Content-Type" (if (string? body)
+                                "text/plain"
+                                "application/json")}
+     :body body}))
 
 (defn common-interceptors [base-interceptors logger {:keys [response-fn on-error-fn!] :as intercept-exceptions?}]
   (filterv
