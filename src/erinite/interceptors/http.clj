@@ -7,7 +7,11 @@
    :no-content {:code 204}
    :redirect {:code 307 :headers (fn [url] {"Location" url})}
    :bad-request {:code 400}
-   :invalid {:code 400}
+   :invalid {:code 400
+             :body (fnil identity "Invalid Request")
+             :headers (fn [body] {"Content-Type" (if (string? body)
+                                                   "text/plain"
+                                                   "application/json")})}
    :not-authorized {:code 401}
    :forbidden {:code 403}
    :not-found {:code 404}
