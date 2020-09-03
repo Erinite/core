@@ -9,9 +9,9 @@
    :bad-request {:code 400}
    :invalid {:code 400
              :body (fnil identity "Invalid Request")
-             :headers (fn [body] {"Content-Type" (if (string? body)
-                                                   "text/plain"
-                                                   "application/json")})}
+             :headers (fn [body]
+                        (when (string? body)
+                          {"Content-Type" "text/plain"}))}
    :not-authorized {:code 401}
    :forbidden {:code 403}
    :not-found {:code 404}
