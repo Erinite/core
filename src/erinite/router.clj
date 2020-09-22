@@ -65,7 +65,7 @@
        (exception/exception-interceptor
         (merge
          exception/default-handlers
-         {::exception/default (partial -default-error-handler-handler (or response-fn (constantly "Internal Server Error")))
+         {::exception/default (partial -default-error-handler-handler (or response-fn (constantly {:error "Internal Server Error"})))
           ::exception/wrap (fn [handler e request]
                              (let [error-info (merge
                                                (select-keys request [:uri :request-method]) ; By default, parameters and headers are not logged in case they contain sensitive data
