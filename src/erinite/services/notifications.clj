@@ -2,10 +2,10 @@
   (:require [integrant.core :as ig]))
 
 (defprotocol Notifications
-  (notify! [conn topic message] "Notify on a topic"))
+  (notify! [notification topic message] "Notify on a topic"))
 
-(defrecord Boundary [conn])
+(deftype Boundary [notification])
 
 (defmethod ig/init-key :erinite.services/notifications
-  [_ conn]
-  (->Boundary conn))
+  [_ notification]
+  (->Boundary notification))
