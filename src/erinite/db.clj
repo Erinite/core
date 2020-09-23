@@ -12,7 +12,8 @@
       [:success (f tx)])
     (catch java.sql.SQLException e
       (let [sql-state (.getSQLState e)]
-        (if (string/includes? sql-state "40001")
+        (if (and sql-state
+                 (string/includes? sql-state "40001"))
           [:retry nil]
           [:error e])))
     (catch Exception e
