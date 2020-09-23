@@ -2,10 +2,10 @@
   (:require [integrant.core :as ig]))
 
 (defprotocol Queue
-  (enqueue! [queue message] "Enqueue a message"))
+  (enqueue! [instance message] "Enqueue a message"))
 
-(deftype Boundary [queue])
+(deftype Boundary [instance])
 
 (defmethod ig/init-key :erinite.services/queue
-  [_ queue]
-  (->Boundary queue))
+  [_ instance]
+  (->Boundary instance))
