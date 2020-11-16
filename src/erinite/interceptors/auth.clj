@@ -23,17 +23,17 @@
             (let [request (:request context)
                   headers (:headers request)
                   token (-get-token headers)]
-              (log request :trace ::attach-session {:token token
-                                                    :uri (:uri request)})
+              (log request :info ::attach-session {:token token
+                                                   :uri (:uri request)
+                                                   :method (:request-method request)})
               (if-let [session (and token (try
                                             (session-valid? token)
                                             (catch Exception e
-                                              (log-exception request :session/validation-error e))))]
-                (let [{:keys [account-id user-id id]} session]
-                  (log request :debug ::authenticated {:session/account account-id
-                                                       :session/user user-id
-                                                       :session/id id})
-                  (logging/set-context! id user-id account-id)
+                                              (log-exception request :session/validation-error e)
+                                              nil)))]
+                (let [{:keys [account-id user-id session-id]} session]
+                  (logging/set-context! session-id user-id account-id)
+                  (log request :debug ::authenticated {:session/id session-id})
                   (assoc-in context [:request :session] session))
                 (do
                   (log request :debug ::not-authorized)

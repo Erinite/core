@@ -3,7 +3,9 @@
             [hugsql.core :as hugsql]
             [clojure.string :as string]
             [clojure.core.async :as async]
+            [cheshire.generate :refer [add-encoder]]
             [integrant.core :as ig]))
+
 
 (defn -run-in-tx!
   [db f]
@@ -19,41 +21,47 @@
     (catch Exception e
       [:error e])))
 
-(defn in-async-tx
-  "Run a function, f, inside a database transaction, retrying on concurrent"
+
+(defn in-tx
+  "Run a function, f, inside a database transaction, retrying on concurrent modification error"
   [db f & [{:keys [on-success! on-error! on-retry!]}]]
+  (loop []
+    (let [[status result] (-run-in-tx! db f)]
+      (case status
+        :retry
+        (do
+          (when on-retry! (on-retry!))
+          (recur))
+
+        :error
+        (do
+          (when on-error! (on-error! result))
+          ::error)
+
+        :success
+        (if on-success!
+          (on-success! result)
+          result)))))
+
+
+(defn in-async-tx
+  ""
+  [db f & [opts]]
   (async/go
-    (loop []
-      (let [[status result] (-run-in-tx! db f)] 
-        (case status
-          :retry
-          (do
-            (when on-retry!  (on-retry!))
-            (recur))
+   (if-let [result (in-tx db f opts)]
+     result
+     ::nil)))
 
-          :error
-          (if on-error!
-            (on-error! result)
-            (do
-              (.printStackTrace result)
-              ::nil))
-
-          :success
-          (if on-success!
-            (on-success! result)
-            (if (nil? result) ::nil result)))))))
 
 (defmacro with-tx [[tx db] & body]
-  `(let [error-ch# (async/chan)
-         result-ch# (in-async-tx
-                      (or (:spec ~db) ~db)
-                      (fn [~tx]
-                        ~@body)
-                      {:on-error! #(async/>!! error-ch# %)})]
-    (let [[value# ch#] (async/alts!! [result-ch# error-ch#])]
-      (if (= ch# result-ch#)
-        (when-not (= value# ::nil) value#)
-        (throw value#)))))
+  `(let [error# (volatile! nil)
+         result# (in-tx (or (:spec ~db) ~db)
+                        (fn [~tx] ~@body)
+                        {:on-error! #(vreset! error# %)})]
+     (if (= result# ::error)
+       (throw @error#)
+       result#)))
+
 
 (defn call-with-tx
   [db f! & args]
@@ -82,3 +90,15 @@
       (hugsql/def-db-fns ~queries-file {:ns this-ns#}))
     (defmethod ig/halt-key! ~component-id [_# _#])))
      
+
+(defn kw->pg-enum
+  "Converts a keyword into a PGObject for a Postgres Enum"
+  [enum-type kw]
+  (doto (org.postgresql.util.PGobject.)
+    (.setType enum-type)
+    (.setValue (name kw))))
+
+; So that duct.sql can log sql statements containing PGobject's using erinite.db's JSON logger
+(add-encoder org.postgresql.util.PGobject
+             (fn [pg-object jsonGenerator]
+               (.writeString jsonGenerator (.getValue pg-object))))

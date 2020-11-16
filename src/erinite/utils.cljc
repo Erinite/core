@@ -2,7 +2,8 @@
   #?(:clj (:require [clj-time.core :as time]
                     [clj-time.coerce :as timec]
                     [clojure.java.io :as io]
-                    [taoensso.nippy :as nippy])))
+                    [taoensso.nippy :as nippy]))
+  #?(:clj (:import [java.util Base64])))
 
 #?(:clj
    (defn get-current-time []
@@ -25,3 +26,13 @@
      [data]
      (when data
        (nippy/freeze data))))
+
+#?(:clj
+   (defn base64-encode
+     [bytes]
+     (.encodeToString (Base64/getEncoder) bytes)))
+
+#?(:clj
+   (defn base64-decode
+     [bytes]
+     (.decode (Base64/getDecoder) bytes)))

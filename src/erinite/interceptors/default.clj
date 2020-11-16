@@ -1,26 +1,16 @@
-(ns erinite.interceptors.default
-  (:require [duct.logger :as log]))
+(ns erinite.interceptors.default)
 
 (defn attach-db
   [db]
   {:name :attach-db
-   :enter (fn [context]
-            (let [logger (get-in context [:request :logger])]
-              (log/log logger :trace ::attach-db)
-              (assoc-in context [:request :db] db)))})
+   :enter #(assoc-in % [:request :db] db)})
 
 (defn attach-services
   [services]
   {:name :attach-services
-   :enter (fn [context]
-            (let [logger (get-in context [:request :logger])]
-              (log/log logger :trace ::attach-services {:services (vec (keys services))})
-              (update-in context [:request :services] merge services)))})
+   :enter #(update-in % [:request :services] merge services)})
 
 (defn attach-component-data
   [data]
   {:name :attach-component-data
-   :enter (fn [context]
-            (let [logger (get-in context [:request :logger])]
-              (log/log logger :trace ::attach-data {:data (vec (keys data))})
-              (update-in context [:request :component-data] merge data)))})
+   :enter #(update-in % [:request :component-data] merge data)})
