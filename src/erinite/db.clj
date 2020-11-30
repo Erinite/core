@@ -1,6 +1,7 @@
 (ns erinite.db
   (:require [clojure.java.jdbc :as jdbc]
             [hugsql.core :as hugsql]
+            [cheshire.core :as json]
             [clojure.string :as string]
             [clojure.core.async :as async]
             [cheshire.generate :refer [add-encoder]]
@@ -97,6 +98,20 @@
   (doto (org.postgresql.util.PGobject.)
     (.setType enum-type)
     (.setValue (name kw))))
+
+(defn as-pg-jsonb
+  "Converts a data structure to a JSONB object"
+  [data]
+  (doto (org.postgresql.util.PGobject.)
+    (.setType "JSONB")
+    (.setValue (json/generate-string data))))
+
+(defn as-pg-object
+  "Converts a data structure to the named object type"
+  [object-type data]
+  (doto (org.postgresql.util.PGobject.)
+    (.setType object-type)
+    (.setValue data)))
 
 ; So that duct.sql can log sql statements containing PGobject's using erinite.db's JSON logger
 (add-encoder org.postgresql.util.PGobject
