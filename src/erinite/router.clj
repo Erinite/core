@@ -171,7 +171,8 @@
                      :body "Not Found"})
         {:executor sieppari/executor})))
      :access-control-allow-origin (map re-pattern cors-origins)
-     :access-control-allow-methods [:get :put :post :delete])))
+     :access-control-allow-methods [:get :put :post :delete]
+     :access-control-allow-credentials "true")))
 
 (defmethod ig/init-key :erinite/router
   [_ options]
