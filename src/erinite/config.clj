@@ -6,3 +6,7 @@
 (defmethod ig/init-key ::static
   [_ options]
   options)
+
+(defmethod ig/init-key ::static-value
+  [_ options]
+  (:value options))
